@@ -37,7 +37,7 @@ class MarketData:
             sys.exit(1)
     
     def messageHandler(self):
-        api_feed = "AGGREGATED_ORDERBOOK_UPDATE"
+        api_feed = "MARKET_SUMMARY_UPDATE"
         switcher = {
             'LUNO': json.dumps({
                                 'api_key_id': 'heauh4f78vajn',
@@ -54,6 +54,10 @@ class MarketData:
             size = float(x['quantity'])
             if size != 0.0:
                 self.api_book[side].update({price_level : {'volume': size}})
+            else:
+                if price_level in self.api_book[side]:
+                    self.api_book[side].pop(price_level)
+        self.api_book['timestamp'] = update_time
 
     def connect(self):
         try:
@@ -84,29 +88,26 @@ class MarketData:
                 sys.exit()
             except Exception as error:
                 self.websocket.close()
-            logging.info(api_data)
-            
+            api_data = json.loads(api_data)
+            if isinstance(api_data.get("data"), dict):
+                logging.info(api_data)
 
-            try:
-                api_data = json.load(api_data)
-            except Exception as ex:
-                #logging.error(ex)
-                continue
-
-            #Order Count
             if isinstance(api_data.get("data"), dict):
                 end_time = datetime.now()
                 if (end_time - start_time).total_seconds() > 28:
                     logging.info("Sending PING")
-                    #self.websocket.send(ping)
+                    self.websocket.send(ping)
                     start_time = end_time
             
-            if api_data.get("type") == self.api_feed:
-                data = api_data.get("data")
-                self.api_update_book(data["Bids"], "bids", data["LastChange"][:-1])
-                self.api_update_book(data["Asks"], "asks", data["LastChange"][:-1])
+            # if api_data.get("type") == self.api_feed:
+            #     data = api_data.get("data")
+            #     self.api_update_book(data["Bids"], "bids", data["LastChange"][:-1])
+            #     self.api_update_book(data["Asks"], "asks", data["LastChange"][:-1])
+            #     with open('ValrData.json' , 'w') as f:
+            #        json.dump(self.api_book, f)
+            #     sys.exit(1)
 
-test = MarketData(source='Valr', ticker='BTCZAR')
+test = MarketData(source='VALR', ticker='BTCZAR')
 test.connect()
 
         
